@@ -66,6 +66,9 @@ export default function DashboardPage() {
     locale: ptBR,
   });
 
+  const mesAnteriorDiff = (metrics?.faturasEsteMes ?? 0) - (metrics?.faturasUltimoMes ?? 0);
+  const ontemDiff = (metrics?.aprovadasHoje ?? 0) - (metrics?.aprovadasOntem ?? 0);
+
   const filteredFaturas = recentFaturas?.filter(
     (f) =>
       f.number.toLowerCase().includes(search.toLowerCase()) ||
@@ -103,7 +106,11 @@ export default function DashboardPage() {
               icon={FileText}
               iconColor="text-blue-600"
               iconBg="bg-blue-50"
-              trend={{ value: 12, label: "vs. mês anterior", direction: "up" }}
+              trend={{
+                value: mesAnteriorDiff,
+                label: `vs. mês anterior (${metrics?.faturasUltimoMes ?? 0})`,
+                direction: mesAnteriorDiff > 0 ? "up" : mesAnteriorDiff < 0 ? "down" : "neutral",
+              }}
             />
             <MetricCard
               title="Aguardando Revisão"
@@ -119,7 +126,11 @@ export default function DashboardPage() {
               icon={CheckCircle}
               iconColor="text-green-600"
               iconBg="bg-green-50"
-              trend={{ value: 8, label: "vs. ontem", direction: "up" }}
+              trend={{
+                value: ontemDiff,
+                label: `vs. ontem (${metrics?.aprovadasOntem ?? 0})`,
+                direction: ontemDiff > 0 ? "up" : ontemDiff < 0 ? "down" : "neutral",
+              }}
             />
             <MetricCard
               title="Produtos Cadastrados"
@@ -127,7 +138,6 @@ export default function DashboardPage() {
               icon={Package}
               iconColor="text-purple-600"
               iconBg="bg-purple-50"
-              trend={{ value: 3, label: "novos esta semana", direction: "up" }}
             />
           </>
         )}

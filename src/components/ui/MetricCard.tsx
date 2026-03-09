@@ -48,7 +48,7 @@ export function MetricCard({
               <TrendingDown className="h-3.5 w-3.5" />
             ) : null}
             {trend.value > 0 ? "+" : ""}
-            {trend.value}%
+            {trend.value}
           </div>
         )}
       </div>

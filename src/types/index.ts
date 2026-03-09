@@ -142,7 +142,10 @@ export interface DashboardMetrics {
   totalFaturas: number;
   aguardandoRevisao: number;
   aprovadasHoje: number;
+  aprovadasOntem: number;
   totalProdutos: number;
+  faturasEsteMes: number;
+  faturasUltimoMes: number;
   faturasByStatus: Record<string, number>;
 }
 

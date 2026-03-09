@@ -11,41 +11,55 @@ export async function GET() {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = new Date();
+
+    // Today boundaries
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // Yesterday boundaries
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayEnd = new Date(todayStart);
+    yesterdayEnd.setMilliseconds(-1);
+
+    // This month boundaries
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Last month boundaries
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
 
     const [
       totalFaturas,
       aguardandoRevisao,
       aprovadasHoje,
+      aprovadasOntem,
       totalProdutos,
+      faturasEsteMes,
+      faturasUltimoMes,
       faturasByStatusRaw,
     ] = await Promise.all([
       prisma.fatura.count(),
       prisma.fatura.count({ where: { status: "EM_REVISAO" } }),
       prisma.fatura.count({
-        where: {
-          status: "APROVADO",
-          updatedAt: { gte: today, lt: tomorrow },
-        },
+        where: { status: "APROVADO", updatedAt: { gte: todayStart, lte: todayEnd } },
+      }),
+      prisma.fatura.count({
+        where: { status: "APROVADO", updatedAt: { gte: yesterdayStart, lte: yesterdayEnd } },
       }),
       prisma.produto.count({ where: { active: true } }),
-      prisma.fatura.groupBy({
-        by: ["status"],
-        _count: { status: true },
-      }),
+      prisma.fatura.count({ where: { createdAt: { gte: thisMonthStart, lte: thisMonthEnd } } }),
+      prisma.fatura.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }),
+      prisma.fatura.groupBy({ by: ["status"], _count: { status: true } }),
     ]);
 
     const faturasByStatus: Record<string, number> = {
-      PENDENTE: 0,
-      PROCESSANDO: 0,
-      EM_REVISAO: 0,
-      APROVADO: 0,
-      REJEITADO: 0,
+      PENDENTE: 0, PROCESSANDO: 0, EM_REVISAO: 0, APROVADO: 0, REJEITADO: 0,
     };
-
     for (const row of faturasByStatusRaw) {
       faturasByStatus[row.status] = row._count.status;
     }
@@ -55,7 +69,10 @@ export async function GET() {
         totalFaturas,
         aguardandoRevisao,
         aprovadasHoje,
+        aprovadasOntem,
         totalProdutos,
+        faturasEsteMes,
+        faturasUltimoMes,
         faturasByStatus,
       },
     });
