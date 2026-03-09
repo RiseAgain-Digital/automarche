@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
         createdBy: { select: { id: true, name: true, email: true } },
         fatura: { select: { id: true, number: true, status: true } },
         timeEntries: {
-          orderBy: { startTime: "desc" },
-          take: 1,
+          select: { id: true, startTime: true, endTime: true, duration: true },
+          orderBy: { startTime: "asc" },
         },
       },
     });

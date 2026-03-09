@@ -90,6 +90,9 @@ export async function PATCH(
           startTime: new Date(),
         },
       });
+      // Always move to IN_PROGRESS when timer starts
+      if (!validated.status) validated.status = "IN_PROGRESS";
+      if (!validated.startedAt) (validated as Record<string, unknown>).startedAt = new Date().toISOString();
     } else if (validated.action === "stop_timer") {
       const openEntry = await prisma.taskTimeEntry.findFirst({
         where: { taskId: id, userId: session.user.id, endTime: null },
@@ -139,8 +142,8 @@ export async function PATCH(
         assignedTo: { select: { id: true, name: true, email: true } },
         createdBy: { select: { id: true, name: true, email: true } },
         timeEntries: {
-          orderBy: { startTime: "desc" },
-          take: 1,
+          select: { id: true, startTime: true, endTime: true, duration: true },
+          orderBy: { startTime: "asc" },
         },
       },
     });

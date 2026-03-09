@@ -15,6 +15,8 @@ import {
   AlertCircle,
   Loader2,
   Calendar,
+  RotateCcw,
+  CheckCheck,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -84,34 +86,44 @@ function formatDuration(seconds: number): string {
 
 function TaskCard({
   task,
-  onStatusChange,
-  onTimerAction,
+  onAction,
 }: {
   task: TaskData;
-  onStatusChange: (id: string, status: string) => void;
-  onTimerAction: (id: string, action: "start_timer" | "stop_timer") => void;
+  onAction: (id: string, payload: Record<string, unknown>) => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
+  const [showStopPrompt, setShowStopPrompt] = useState(false);
   const isRunning = task.status === "IN_PROGRESS";
 
   useEffect(() => {
+    // Sum all completed time entries
+    const pastSeconds = (task.timeEntries ?? [])
+      .filter((e) => e.endTime !== null)
+      .reduce((sum, e) => sum + (e.duration ?? 0), 0);
+
     if (!isRunning) {
-      setElapsed(0);
+      setElapsed(pastSeconds);
       return;
     }
-    const startedAt = task.startedAt ? new Date(task.startedAt).getTime() : Date.now();
-    const tick = () => setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+
+    // Find the open (running) entry to get its start time
+    const openEntry = (task.timeEntries ?? []).find((e) => e.endTime === null);
+    const sessionStart = openEntry
+      ? new Date(openEntry.startTime).getTime()
+      : Date.now();
+
+    const tick = () =>
+      setElapsed(pastSeconds + Math.floor((Date.now() - sessionStart) / 1000));
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [isRunning, task.startedAt]);
+  }, [isRunning, task.timeEntries]);
 
-  const statusOptions = [
-    { value: "TODO", label: "A Fazer" },
-    { value: "IN_PROGRESS", label: "Em Progresso" },
-    { value: "DONE", label: "Concluído" },
-    { value: "BLOCKED", label: "Bloqueado" },
-  ];
+  const handleStopConfirm = (outcome: "DONE" | "BLOCKED") => {
+    setShowStopPrompt(false);
+    // Single call: stop timer + set final status together
+    onAction(task.id, { action: "stop_timer", status: outcome });
+  };
 
   return (
     <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:shadow-md transition-shadow">
@@ -134,37 +146,76 @@ function TaskCard({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {task.status !== "DONE" && task.status !== "BLOCKED" && (
-            <>
-              {isRunning ? (
-                <button
-                  onClick={() => onTimerAction(task.id, "stop_timer")}
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-medium transition-colors"
-                >
-                  <Square className="h-3.5 w-3.5" />
-                  {elapsed > 0 && formatDuration(elapsed)}
-                </button>
-              ) : (
-                <button
-                  onClick={() => onTimerAction(task.id, "start_timer")}
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-medium transition-colors"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  Iniciar
-                </button>
-              )}
-            </>
+          {/* TODO → start timer */}
+          {task.status === "TODO" && (
+            <button
+              onClick={() => onAction(task.id, { action: "start_timer" })}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-medium transition-colors"
+            >
+              <Play className="h-3.5 w-3.5" />
+              {elapsed > 0 ? formatDuration(elapsed) : "Iniciar"}
+            </button>
+          )}
+
+          {/* IN_PROGRESS → stop and prompt */}
+          {task.status === "IN_PROGRESS" && (
+            <button
+              onClick={() => setShowStopPrompt(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-medium transition-colors"
+            >
+              <Square className="h-3.5 w-3.5" />
+              {elapsed > 0 ? formatDuration(elapsed) : "Parar"}
+            </button>
+          )}
+
+          {/* BLOCKED → resume */}
+          {task.status === "BLOCKED" && (
+            <button
+              onClick={() => onAction(task.id, { action: "start_timer" })}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs font-medium transition-colors"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Retomar {elapsed > 0 && `(${formatDuration(elapsed)})`}
+            </button>
           )}
         </div>
       </div>
 
+      {/* Stop prompt — inline below the title */}
+      {showStopPrompt && (
+        <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <p className="text-xs font-medium text-slate-700 mb-2">
+            Como deseja encerrar esta tarefa?
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleStopConfirm("DONE")}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              Concluída
+            </button>
+            <button
+              onClick={() => handleStopConfirm("BLOCKED")}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold transition-colors"
+            >
+              <AlertCircle className="h-3.5 w-3.5" />
+              Bloqueada
+            </button>
+            <button
+              onClick={() => setShowStopPrompt(false)}
+              className="px-3 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-xs font-medium transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
         <div className="flex items-center gap-3">
           {task.assignedTo && (
-            <div
-              className="flex items-center gap-1.5"
-              title={task.assignedTo.name}
-            >
+            <div className="flex items-center gap-1.5" title={task.assignedTo.name}>
               <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
                 <span className="text-xs font-semibold text-white">
                   {getInitials(task.assignedTo.name)}
@@ -183,17 +234,13 @@ function TaskCard({
           )}
         </div>
 
-        <select
-          value={task.status}
-          onChange={(e) => onStatusChange(task.id, e.target.value)}
-          className="text-xs border-none bg-transparent text-slate-400 cursor-pointer focus:outline-none hover:text-slate-600"
-        >
-          {statusOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        {/* Status label — read-only for IN_PROGRESS/DONE, actionable only for BLOCKED showing reopen hint */}
+        <span className="text-xs text-slate-400">
+          {task.status === "TODO" && "A fazer"}
+          {task.status === "IN_PROGRESS" && "Em progresso"}
+          {task.status === "DONE" && "Concluída"}
+          {task.status === "BLOCKED" && "Bloqueada"}
+        </span>
       </div>
     </div>
   );
@@ -234,16 +281,9 @@ export default function TarefasPage() {
     },
   });
 
-  const handleStatusChange = useCallback(
-    (id: string, status: string) => {
-      updateTaskMutation.mutate({ id, status });
-    },
-    [updateTaskMutation]
-  );
-
-  const handleTimerAction = useCallback(
-    (id: string, action: "start_timer" | "stop_timer") => {
-      updateTaskMutation.mutate({ id, action });
+  const handleAction = useCallback(
+    (id: string, payload: Record<string, unknown>) => {
+      updateTaskMutation.mutate({ id, ...payload });
     },
     [updateTaskMutation]
   );
@@ -403,8 +443,7 @@ export default function TarefasPage() {
                     <TaskCard
                       key={task.id}
                       task={task}
-                      onStatusChange={handleStatusChange}
-                      onTimerAction={handleTimerAction}
+                      onAction={handleAction}
                     />
                   ))}
                 </div>

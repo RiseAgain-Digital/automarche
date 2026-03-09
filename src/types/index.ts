@@ -123,6 +123,12 @@ export interface TaskData {
     name: string;
     email: string;
   };
+  timeEntries?: {
+    id: string;
+    startTime: string;
+    endTime: string | null;
+    duration: number | null;
+  }[];
 }
 
 export interface ProdutoData {
