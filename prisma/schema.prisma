@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          String    @default("user")
+  faturas       Fatura[]
+  createdTasks  Task[]    @relation("createdTasks")
+  assignedTasks Task[]    @relation("assignedTasks")
+  sessions      Session[]
+  accounts      Account[]
+  timeEntries   TaskTimeEntry[]
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Produto {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  unit        String       @default("UN")
+  price       Decimal?     @db.Decimal(10, 2)
+  category    String?
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  faturaItems FaturaItem[]
+  scanItems   ScanItem[]
+}
+
+enum FaturaStatus {
+  PENDENTE
+  PROCESSANDO
+  EM_REVISAO
+  APROVADO
+  REJEITADO
+}
+
+model Fatura {
+  id            String        @id @default(cuid())
+  number        String        @unique
+  supplier      String?
+  status        FaturaStatus  @default(PENDENTE)
+  imageUrl      String?
+  ocrData       Json?
+  totalInvoice  Decimal?      @db.Decimal(10, 2)
+  totalScanned  Decimal?      @db.Decimal(10, 2)
+  notes         String?
+  receivedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  items         FaturaItem[]
+  scanItems     ScanItem[]
+  discrepancies Discrepancy[]
+  tasks         Task[]
+}
+
+model FaturaItem {
+  id          String   @id @default(cuid())
+  faturaId    String
+  fatura      Fatura   @relation(fields: [faturaId], references: [id], onDelete: Cascade)
+  produtoId   String?
+  produto     Produto? @relation(fields: [produtoId], references: [id])
+  productCode String?
+  productName String?
+  quantity    Decimal  @db.Decimal(10, 3)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+}
+
+model ScanItem {
+  id          String   @id @default(cuid())
+  faturaId    String
+  fatura      Fatura   @relation(fields: [faturaId], references: [id], onDelete: Cascade)
+  produtoId   String?
+  produto     Produto? @relation(fields: [produtoId], references: [id])
+  productCode String?
+  productName String?
+  quantity    Decimal  @db.Decimal(10, 3)
+  scannedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+enum DiscrepancyStatus {
+  PENDENTE
+  RESOLVIDO
+  IGNORADO
+}
+
+model Discrepancy {
+  id          String            @id @default(cuid())
+  faturaId    String
+  fatura      Fatura            @relation(fields: [faturaId], references: [id], onDelete: Cascade)
+  productCode String?
+  productName String?
+  invoiceQty  Decimal           @db.Decimal(10, 3)
+  scannedQty  Decimal           @db.Decimal(10, 3)
+  difference  Decimal           @db.Decimal(10, 3)
+  status      DiscrepancyStatus @default(PENDENTE)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  BLOCKED
+}
+
+enum Shift {
+  MANHA
+  TARDE
+  NOITE
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  status       TaskStatus @default(TODO)
+  shift        Shift?
+  priority     Int        @default(0)
+  dueDate      DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  faturaId     String?
+  fatura       Fatura?    @relation(fields: [faturaId], references: [id])
+  createdById  String
+  createdBy    User       @relation("createdTasks", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?      @relation("assignedTasks", fields: [assignedToId], references: [id])
+  timeEntries  TaskTimeEntry[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model TaskTimeEntry {
+  id        String    @id @default(cuid())
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int?
+  createdAt DateTime  @default(now())
+}
