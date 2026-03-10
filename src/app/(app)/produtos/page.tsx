@@ -263,65 +263,67 @@ export default function ProdutosPage() {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-        defval: "",
-      });
+      const rawRows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
 
-      const produtos = rows
-        .map((row) => ({
-          code: String(
-            row["Código"] ?? row["codigo"] ?? row["code"] ?? row["CODE"] ?? ""
-          ).trim(),
-          name: String(
-            row["Nome"] ?? row["nome"] ?? row["name"] ?? row["NAME"] ?? ""
-          ).trim(),
-          unit:
-            String(
-              row["Unidade"] ?? row["unidade"] ?? row["unit"] ?? "UN"
-            ).trim() || "UN",
-          price:
-            row["Preço"] ?? row["preco"] ?? row["price"]
-              ? parseFloat(
-                  String(
-                    row["Preço"] ?? row["preco"] ?? row["price"]
-                  ).replace(",", ".")
-                ) || null
+      // Find header row (the one with ITM in column 0)
+      const headerIdx = rawRows.findIndex((row) => Array.isArray(row) && row[0] === "ITM");
+
+      let produtos: { code: string; name: string; unit: string; price: number | null; category: string | null; active: boolean }[];
+
+      if (headerIdx !== -1) {
+        // Mercalys format: ITM | EAN | DESIGN | PC | PVP | STOCK | MRG | IVA | NOM
+        produtos = (rawRows.slice(headerIdx + 1) as unknown[][])
+          .map((row) => ({
+            code: String(row[0] ?? "").trim(),
+            name: String(row[2] ?? "").trim(),
+            unit: "UN",
+            price: row[4] !== "" && row[4] !== undefined ? Number(row[4]) || null : null,
+            category: String(row[8] ?? "").trim() || null,
+            active: true,
+          }))
+          .filter((p) => p.code.length > 5 && p.name.length > 0);
+      } else {
+        // Generic format: try common column name variants
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+        produtos = rows
+          .map((row) => ({
+            code: String(row["Código"] ?? row["codigo"] ?? row["code"] ?? row["CODE"] ?? row["ITM"] ?? "").trim(),
+            name: String(row["Nome"] ?? row["nome"] ?? row["name"] ?? row["NAME"] ?? row["DESIGN"] ?? "").trim(),
+            unit: String(row["Unidade"] ?? row["unidade"] ?? row["unit"] ?? "UN").trim() || "UN",
+            price: row["Preço"] ?? row["preco"] ?? row["price"] ?? row["PVP"]
+              ? parseFloat(String(row["Preço"] ?? row["preco"] ?? row["price"] ?? row["PVP"]).replace(",", ".")) || null
               : null,
-          category:
-            String(
-              row["Categoria"] ?? row["categoria"] ?? row["category"] ?? ""
-            ).trim() || null,
-          active: true,
-        }))
-        .filter((p) => p.code && p.name);
+            category: String(row["Categoria"] ?? row["categoria"] ?? row["category"] ?? row["NOM"] ?? "").trim() || null,
+            active: true,
+          }))
+          .filter((p) => p.code && p.name);
+      }
 
       if (produtos.length === 0) {
-        setImportStatus(
-          "Nenhum produto válido encontrado. Verifique o arquivo."
-        );
+        setImportStatus("Nenhum produto válido encontrado. Verifique o arquivo.");
         return;
       }
 
-      setImportStatus(`Importando ${produtos.length} produtos...`);
+      // Send in batches of 500 to avoid request size limits
+      const BATCH = 500;
+      let imported = 0;
+      for (let i = 0; i < produtos.length; i += BATCH) {
+        const batch = produtos.slice(i, i + BATCH);
+        setImportStatus(`Importando... ${Math.min(i + BATCH, produtos.length)} / ${produtos.length}`);
+        const res = await fetch("/api/produtos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(batch),
+        });
+        if (!res.ok) throw new Error(`Erro na importação (lote ${Math.floor(i / BATCH) + 1})`);
+        imported += batch.length;
+      }
 
-      const res = await fetch("/api/produtos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(produtos),
-      });
-
-      if (!res.ok) throw new Error("Erro na importação");
-      const json = await res.json();
-
-      setImportStatus(
-        json.message ?? `${produtos.length} produtos importados com sucesso!`
-      );
+      setImportStatus(`${imported} produtos importados com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ["produtos"] });
-      setTimeout(() => setImportStatus(null), 4000);
+      setTimeout(() => setImportStatus(null), 5000);
     } catch (err) {
-      setImportStatus(
-        `Erro: ${err instanceof Error ? err.message : "Falha na importação"}`
-      );
+      setImportStatus(`Erro: ${err instanceof Error ? err.message : "Falha na importação"}`);
     }
 
     if (fileInputRef.current) fileInputRef.current.value = "";

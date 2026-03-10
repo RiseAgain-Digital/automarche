@@ -75,6 +75,9 @@ export async function POST(
     if (n8nWebhookUrl) {
       const appUrl =
         process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      // Include base64-encoded image so n8n doesn't need to download it
+      const imageBase64 = Buffer.from(bytes).toString("base64");
+      const imageMimeType = file.type;
       fetch(n8nWebhookUrl, {
         method: "POST",
         headers: {
@@ -85,6 +88,8 @@ export async function POST(
           faturaId: id,
           faturaNumber: fatura.number,
           imageUrl: `${appUrl}${imageUrl}`,
+          imageBase64,
+          imageMimeType,
           callbackUrl: `${appUrl}/api/webhooks/n8n`,
         }),
       }).catch((err) => logger.error(err, "Failed to trigger n8n webhook"));

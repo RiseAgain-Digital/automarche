@@ -464,8 +464,7 @@ export default function TarefasPage() {
                   <TaskCard
                     key={task.id}
                     task={task}
-                    onStatusChange={handleStatusChange}
-                    onTimerAction={handleTimerAction}
+                    onAction={handleAction}
                   />
                 ))}
               </div>
