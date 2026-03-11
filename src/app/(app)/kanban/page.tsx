@@ -85,15 +85,28 @@ function FaturaCard({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
+    transition: transition ?? undefined,
   };
+
+  if (isDragging && !overlay) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/40 h-24"
+      />
+    );
+  }
 
   const card = (
     <div
-      className={`bg-white rounded-xl border border-slate-100 shadow-sm p-4 cursor-grab active:cursor-grabbing ${
-        overlay ? "shadow-xl rotate-1 scale-105" : "hover:shadow-md hover:border-slate-200"
-      } transition-all`}
+      className={`bg-white rounded-xl border p-4 ${
+        overlay
+          ? "shadow-2xl border-slate-200 rotate-[2deg] scale-[1.04] cursor-grabbing"
+          : "border-slate-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5"
+      } transition-all duration-150`}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -176,9 +189,10 @@ function KanbanColumn({
       {/* Drop zone */}
       <div
         ref={setNodeRef}
-        className={`flex-1 min-h-48 p-2 rounded-b-xl border border-t-0 border-slate-200 space-y-2 transition-colors ${
-          isOver ? "bg-blue-50/70" : column.color
+        className={`flex-1 min-h-48 px-2 pt-2 rounded-b-xl border border-t-0 border-slate-200 space-y-2 transition-all duration-200 ease-out ${
+          isOver ? "bg-blue-50/60 ring-2 ring-inset ring-blue-200/70" : column.color
         } kanban-column`}
+        style={{ paddingBottom: isOver ? "3rem" : "0.5rem" }}
       >
         <SortableContext
           items={faturas.map((f) => f.id)}
@@ -242,6 +256,21 @@ export default function KanbanPage() {
     [faturas]
   );
 
+  const applyOptimisticStatus = useCallback(
+    (id: string, newStatus: string) => {
+      queryClient.setQueryData<FaturaWithRelations[]>(
+        ["faturas", "kanban"],
+        (old) =>
+          old
+            ? old.map((f) =>
+                f.id === id ? { ...f, status: newStatus as FaturaStatusKey } : f
+              )
+            : old
+      );
+    },
+    [queryClient]
+  );
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveFatura(null);
@@ -261,6 +290,7 @@ export default function KanbanPage() {
       if (validStatuses.includes(overId as FaturaStatusKey)) {
         const fatura = faturas.find((f) => f.id === active.id);
         if (fatura && fatura.status !== overId) {
+          applyOptimisticStatus(fatura.id, overId);
           updateStatusMutation.mutate({ id: fatura.id, status: overId });
         }
         return;
@@ -271,11 +301,12 @@ export default function KanbanPage() {
       if (overFatura) {
         const fatura = faturas.find((f) => f.id === active.id);
         if (fatura && fatura.status !== overFatura.status) {
+          applyOptimisticStatus(fatura.id, overFatura.status);
           updateStatusMutation.mutate({ id: fatura.id, status: overFatura.status });
         }
       }
     },
-    [faturas, updateStatusMutation]
+    [faturas, updateStatusMutation, applyOptimisticStatus]
   );
 
   const onCreateFatura = async (data: CreateFaturaForm) => {
@@ -362,7 +393,12 @@ export default function KanbanPage() {
                 />
               ))}
             </div>
-            <DragOverlay>
+            <DragOverlay
+              dropAnimation={{
+                duration: 220,
+                easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)",
+              }}
+            >
               {activeFatura && (
                 <FaturaCard fatura={activeFatura} overlay />
               )}
