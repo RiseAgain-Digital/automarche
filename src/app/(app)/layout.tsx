@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ClientLayout } from "@/components/layout/ClientLayout";
 
 export default async function AppLayout({
   children,
@@ -22,9 +23,7 @@ export default async function AppLayout({
         userName={session.user.name}
         userEmail={session.user.email}
       />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+      <ClientLayout>{children}</ClientLayout>
     </div>
   );
 }

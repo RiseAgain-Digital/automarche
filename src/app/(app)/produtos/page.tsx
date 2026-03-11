@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useImport } from "@/lib/import-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -162,7 +163,7 @@ export default function ProdutosPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editProduto, setEditProduto] = useState<ProdutoData | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const { setImportState } = useImport();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
@@ -257,7 +258,7 @@ export default function ProdutosPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setImportStatus("Lendo arquivo...");
+    setImportState({ message: "Lendo arquivo...", done: false });
 
     try {
       const buffer = await file.arrayBuffer();
@@ -300,13 +301,13 @@ export default function ProdutosPage() {
       }
 
       if (produtos.length === 0) {
-        setImportStatus("Nenhum produto válido encontrado. Verifique o arquivo.");
+        setImportState({ message: "Nenhum produto válido encontrado. Verifique o arquivo.", done: true });
         return;
       }
 
       // Send all at once — the server handles batching internally so this
       // request completes even if the user navigates away before it finishes.
-      setImportStatus(`Importando ${produtos.length} produtos...`);
+      setImportState({ message: `Importando ${produtos.length} produtos...`, done: false });
       const res = await fetch("/api/produtos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -315,11 +316,11 @@ export default function ProdutosPage() {
       if (!res.ok) throw new Error("Erro na importação");
       const json = await res.json();
 
-      setImportStatus(json.message ?? `${produtos.length} produtos importados com sucesso!`);
+      setImportState({ message: json.message ?? `${produtos.length} produtos importados com sucesso!`, done: true });
       queryClient.invalidateQueries({ queryKey: ["produtos"] });
-      setTimeout(() => setImportStatus(null), 5000);
+      setTimeout(() => setImportState(null), 5000);
     } catch (err) {
-      setImportStatus(`Erro: ${err instanceof Error ? err.message : "Falha na importação"}`);
+      setImportState({ message: `Erro: ${err instanceof Error ? err.message : "Falha na importação"}`, done: true });
     }
 
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -363,16 +364,6 @@ export default function ProdutosPage() {
           </Button>
         </div>
       </div>
-
-      {/* Import status */}
-      {importStatus && (
-        <div className="mb-4 flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-lg px-4 py-3">
-          <span className="flex-1">{importStatus}</span>
-          <button onClick={() => setImportStatus(null)}>
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
       {/* Search */}
       <form onSubmit={handleSearch} className="mb-5 flex gap-2 max-w-md">
