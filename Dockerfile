@@ -18,6 +18,9 @@ RUN npx prisma generate
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Dummy value so Next.js static analysis doesn't fail at build time.
+# The real DATABASE_URL is injected at runtime via k8s secret / .env.
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npm run build
 
 # Stage 3: runner
