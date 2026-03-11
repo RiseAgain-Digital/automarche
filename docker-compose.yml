@@ -46,12 +46,15 @@ services:
     restart: unless-stopped
     ports:
       - "5678:5678"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       N8N_HOST: n8n
       N8N_PORT: 5678
       N8N_PROTOCOL: http
       WEBHOOK_URL: http://n8n:5678/
       GENERIC_TIMEZONE: America/Sao_Paulo
+      N8N_DEFAULT_BINARY_DATA_MODE: memory
       N8N_BASIC_AUTH_ACTIVE: "true"
       N8N_BASIC_AUTH_USER: admin
       N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-changeme}
