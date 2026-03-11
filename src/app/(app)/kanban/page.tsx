@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
   closestCorners,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -18,7 +20,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useDroppable } from "@dnd-kit/core";
 import { format } from "date-fns";
 import { Plus, Upload, X, FileText, Loader2, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -36,6 +37,18 @@ const COLUMNS: { key: FaturaStatusKey; label: string; color: string; accent: str
   { key: "APROVADO", label: "Aprovado", color: "bg-green-50", accent: "bg-green-500" },
   { key: "REJEITADO", label: "Rejeitado", color: "bg-red-50", accent: "bg-red-500" },
 ];
+
+function buildColumnItems(
+  faturas: FaturaWithRelations[]
+): Record<FaturaStatusKey, string[]> {
+  const result = {} as Record<FaturaStatusKey, string[]>;
+  for (const col of COLUMNS) {
+    result[col.key] = faturas
+      .filter((f) => f.status === col.key)
+      .map((f) => f.id);
+  }
+  return result;
+}
 
 async function fetchFaturas(): Promise<FaturaWithRelations[]> {
   const res = await fetch("/api/faturas?pageSize=100");
@@ -162,10 +175,14 @@ function FaturaCard({
 // Droppable column
 function KanbanColumn({
   column,
-  faturas,
+  items,
+  allFaturas,
+  realCount,
 }: {
   column: (typeof COLUMNS)[0];
-  faturas: FaturaWithRelations[];
+  items: string[];
+  allFaturas: FaturaWithRelations[];
+  realCount: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.key });
 
@@ -182,7 +199,7 @@ function KanbanColumn({
           </span>
         </div>
         <span className="text-xs font-bold text-slate-500 bg-white/70 rounded-full px-2 py-0.5">
-          {faturas.length}
+          {realCount}
         </span>
       </div>
 
@@ -194,15 +211,14 @@ function KanbanColumn({
         } kanban-column`}
         style={{ paddingBottom: isOver ? "3rem" : "0.5rem" }}
       >
-        <SortableContext
-          items={faturas.map((f) => f.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {faturas.map((fatura) => (
-            <FaturaCard key={fatura.id} fatura={fatura} />
-          ))}
+        <SortableContext items={items} strategy={verticalListSortingStrategy}>
+          {items.map((id) => {
+            const fatura = allFaturas.find((f) => f.id === id);
+            if (!fatura) return null;
+            return <FaturaCard key={id} fatura={fatura} />;
+          })}
         </SortableContext>
-        {faturas.length === 0 && (
+        {items.length === 0 && (
           <div className="flex flex-col items-center justify-center h-24 text-slate-300">
             <FileText className="h-8 w-8 mb-1" />
             <span className="text-xs">Solte aqui</span>
@@ -219,6 +235,14 @@ export default function KanbanPage() {
   const [activeFatura, setActiveFatura] = useState<FaturaWithRelations | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [columnItems, setColumnItems] = useState<Record<FaturaStatusKey, string[]>>(
+    () => buildColumnItems([])
+  );
+  // Ref so handleDragEnd can read latest columnItems without stale closure
+  const columnItemsRef = useRef(columnItems);
+  useEffect(() => {
+    columnItemsRef.current = columnItems;
+  }, [columnItems]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -229,6 +253,13 @@ export default function KanbanPage() {
     queryFn: fetchFaturas,
     refetchInterval: 15000,
   });
+
+  // Sync columnItems from server data whenever we're not mid-drag
+  useEffect(() => {
+    if (!activeFatura) {
+      setColumnItems(buildColumnItems(faturas));
+    }
+  }, [faturas, activeFatura]);
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
@@ -256,6 +287,48 @@ export default function KanbanPage() {
     [faturas]
   );
 
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    setColumnItems((prev) => {
+      // Find which column the active item is currently in
+      const activeColKey = COLUMNS.find((col) =>
+        prev[col.key].includes(activeId)
+      )?.key;
+      if (!activeColKey) return prev;
+
+      // Find which column the over target belongs to
+      let overColKey: FaturaStatusKey | undefined;
+      if (COLUMNS.find((col) => col.key === overId)) {
+        overColKey = overId as FaturaStatusKey;
+      } else {
+        overColKey = COLUMNS.find((col) => prev[col.key].includes(overId))?.key;
+      }
+      if (!overColKey) return prev;
+
+      // Same column — let dnd-kit handle intra-column reordering naturally
+      if (activeColKey === overColKey) return prev;
+
+      const activeItems = prev[activeColKey].filter((id) => id !== activeId);
+      const overItems = [...prev[overColKey]];
+
+      // Insert at the position of the hovered card, or at end if hovering the column
+      const overIndex = overItems.indexOf(overId);
+      const insertAt = overIndex === -1 ? overItems.length : overIndex;
+      overItems.splice(insertAt, 0, activeId);
+
+      return {
+        ...prev,
+        [activeColKey]: activeItems,
+        [overColKey]: overItems,
+      };
+    });
+  }, []);
+
   const applyOptimisticStatus = useCallback(
     (id: string, newStatus: string) => {
       queryClient.setQueryData<FaturaWithRelations[]>(
@@ -273,41 +346,31 @@ export default function KanbanPage() {
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      const { active } = event;
+      const activeId = active.id as string;
+
+      // Find where the card ended up (from the live columnItems state)
+      const targetColKey = COLUMNS.find((col) =>
+        columnItemsRef.current[col.key].includes(activeId)
+      )?.key;
+
+      const fatura = faturas.find((f) => f.id === activeId);
+      if (fatura && targetColKey && fatura.status !== targetColKey) {
+        applyOptimisticStatus(activeId, targetColKey);
+        updateStatusMutation.mutate({ id: activeId, status: targetColKey });
+      }
+
+      // Clear active — the useEffect will re-sync columnItems from server data
       setActiveFatura(null);
-      const { active, over } = event;
-      if (!over) return;
-
-      const overId = over.id as string;
-      const validStatuses: FaturaStatusKey[] = [
-        "PENDENTE",
-        "PROCESSANDO",
-        "EM_REVISAO",
-        "APROVADO",
-        "REJEITADO",
-      ];
-
-      // Check if dropped on a column
-      if (validStatuses.includes(overId as FaturaStatusKey)) {
-        const fatura = faturas.find((f) => f.id === active.id);
-        if (fatura && fatura.status !== overId) {
-          applyOptimisticStatus(fatura.id, overId);
-          updateStatusMutation.mutate({ id: fatura.id, status: overId });
-        }
-        return;
-      }
-
-      // Dropped on a card - find the column it belongs to
-      const overFatura = faturas.find((f) => f.id === overId);
-      if (overFatura) {
-        const fatura = faturas.find((f) => f.id === active.id);
-        if (fatura && fatura.status !== overFatura.status) {
-          applyOptimisticStatus(fatura.id, overFatura.status);
-          updateStatusMutation.mutate({ id: fatura.id, status: overFatura.status });
-        }
-      }
     },
     [faturas, updateStatusMutation, applyOptimisticStatus]
   );
+
+  const handleDragCancel = useCallback(() => {
+    // Reset column layout to server state
+    setColumnItems(buildColumnItems(faturas));
+    setActiveFatura(null);
+  }, [faturas]);
 
   const onCreateFatura = async (data: CreateFaturaForm) => {
     try {
@@ -342,9 +405,6 @@ export default function KanbanPage() {
       // handled by form
     }
   };
-
-  const columnFaturas = (status: FaturaStatusKey) =>
-    faturas.filter((f) => f.status === status);
 
   return (
     <div className="p-6 h-full flex flex-col">
@@ -382,14 +442,18 @@ export default function KanbanPage() {
             sensors={sensors}
             collisionDetection={closestCorners}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
             <div className="flex gap-4 pb-4">
               {COLUMNS.map((col) => (
                 <KanbanColumn
                   key={col.key}
                   column={col}
-                  faturas={columnFaturas(col.key)}
+                  items={columnItems[col.key] ?? []}
+                  allFaturas={faturas}
+                  realCount={faturas.filter((f) => f.status === col.key).length}
                 />
               ))}
             </div>
