@@ -83,7 +83,13 @@ export async function POST(request: NextRequest) {
 
     // Support bulk import — batching happens here so the client fires one request and can navigate away
     if (Array.isArray(body)) {
+      // Yield between heavy CPU operations so other requests aren't blocked
+      const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+      // Zod validation of thousands of items is synchronous and CPU-heavy — yield after
       const validated = bulkCreateSchema.parse(body);
+      await yieldToEventLoop();
+
       const BATCH_SIZE = 500;
       let totalImported = 0;
 
@@ -112,6 +118,8 @@ export async function POST(request: NextRequest) {
           )
         );
         totalImported += batch.length;
+        // Yield between batches so other requests can be handled
+        await yieldToEventLoop();
       }
 
       logger.info({ count: totalImported }, "Produtos bulk imported");
