@@ -89,12 +89,7 @@ info "Running database migrations..."
 npx prisma migrate deploy
 success "Migrations applied."
 
-# ─── 7. Seed the database ─────────────────────────────────────────────────────
-info "Seeding the database..."
-npm run seed
-success "Database seeded."
-
-# ─── 8. Done ──────────────────────────────────────────────────────────────────
+# ─── 7. Done ──────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}           Setup complete!              ${NC}"
@@ -103,6 +98,9 @@ echo ""
 echo -e "  Postgres  → localhost:5432"
 echo -e "  n8n       → http://localhost:5678  (admin / changeme)"
 echo ""
-echo -e "  Start the dev server with:  ${CYAN}npm run dev${NC}"
-echo -e "  Or run everything in Docker:  ${CYAN}$DOCKER_COMPOSE_CMD up${NC}"
+echo -e "  Start the dev server:  ${CYAN}npm run dev${NC}"
+echo ""
+echo -e "  Then create the first user by visiting:"
+echo -e "  ${CYAN}http://localhost:3000/api/seed${NC}"
+echo -e "  → email: admin@automarche.com  password: admin123"
 echo ""
