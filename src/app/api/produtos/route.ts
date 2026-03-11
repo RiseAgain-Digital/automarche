@@ -81,34 +81,42 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Support bulk import
+    // Support bulk import — batching happens here so the client fires one request and can navigate away
     if (Array.isArray(body)) {
       const validated = bulkCreateSchema.parse(body);
-      const created = await prisma.$transaction(
-        validated.map((p) =>
-          prisma.produto.upsert({
-            where: { code: p.code },
-            update: {
-              name: p.name,
-              unit: p.unit,
-              price: p.price ?? null,
-              category: p.category ?? null,
-              active: p.active,
-            },
-            create: {
-              code: p.code,
-              name: p.name,
-              unit: p.unit,
-              price: p.price ?? null,
-              category: p.category ?? null,
-              active: p.active,
-            },
-          })
-        )
-      );
-      logger.info({ count: created.length }, "Produtos bulk imported");
+      const BATCH_SIZE = 500;
+      let totalImported = 0;
+
+      for (let i = 0; i < validated.length; i += BATCH_SIZE) {
+        const batch = validated.slice(i, i + BATCH_SIZE);
+        await prisma.$transaction(
+          batch.map((p) =>
+            prisma.produto.upsert({
+              where: { code: p.code },
+              update: {
+                name: p.name,
+                unit: p.unit,
+                price: p.price ?? null,
+                category: p.category ?? null,
+                active: p.active,
+              },
+              create: {
+                code: p.code,
+                name: p.name,
+                unit: p.unit,
+                price: p.price ?? null,
+                category: p.category ?? null,
+                active: p.active,
+              },
+            })
+          )
+        );
+        totalImported += batch.length;
+      }
+
+      logger.info({ count: totalImported }, "Produtos bulk imported");
       return NextResponse.json(
-        { data: created, message: `${created.length} produtos importados` },
+        { message: `${totalImported} produtos importados` },
         { status: 201 }
       );
     }

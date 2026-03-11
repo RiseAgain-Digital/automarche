@@ -304,22 +304,18 @@ export default function ProdutosPage() {
         return;
       }
 
-      // Send in batches of 500 to avoid request size limits
-      const BATCH = 500;
-      let imported = 0;
-      for (let i = 0; i < produtos.length; i += BATCH) {
-        const batch = produtos.slice(i, i + BATCH);
-        setImportStatus(`Importando... ${Math.min(i + BATCH, produtos.length)} / ${produtos.length}`);
-        const res = await fetch("/api/produtos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(batch),
-        });
-        if (!res.ok) throw new Error(`Erro na importação (lote ${Math.floor(i / BATCH) + 1})`);
-        imported += batch.length;
-      }
+      // Send all at once — the server handles batching internally so this
+      // request completes even if the user navigates away before it finishes.
+      setImportStatus(`Importando ${produtos.length} produtos...`);
+      const res = await fetch("/api/produtos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(produtos),
+      });
+      if (!res.ok) throw new Error("Erro na importação");
+      const json = await res.json();
 
-      setImportStatus(`${imported} produtos importados com sucesso!`);
+      setImportStatus(json.message ?? `${produtos.length} produtos importados com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ["produtos"] });
       setTimeout(() => setImportStatus(null), 5000);
     } catch (err) {
