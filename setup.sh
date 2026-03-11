@@ -85,6 +85,8 @@ done
 success "Postgres is ready."
 
 # ─── 6. Run Prisma migrations ─────────────────────────────────────────────────
+
+npx prisma generate
 info "Running database migrations..."
 npx prisma migrate deploy
 success "Migrations applied."
