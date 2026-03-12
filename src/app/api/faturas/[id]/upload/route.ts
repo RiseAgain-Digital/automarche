@@ -59,12 +59,12 @@ export async function POST(
 
     const imageUrl = `/uploads/${fileName}`;
 
-    // Update fatura with image URL and set status to PROCESSANDO
+    // Update fatura with image URL and set status to EM_PICAGEM
     await prisma.fatura.update({
       where: { id },
       data: {
         imageUrl,
-        status: "PROCESSANDO",
+        status: "EM_PICAGEM",
       },
     });
 

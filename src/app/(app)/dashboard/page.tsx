@@ -32,19 +32,21 @@ async function fetchRecentFaturas(): Promise<FaturaWithRelations[]> {
 }
 
 const statusColors: Record<FaturaStatusKey, string> = {
-  PENDENTE: "bg-slate-400",
-  PROCESSANDO: "bg-blue-500",
-  EM_REVISAO: "bg-amber-500",
-  APROVADO: "bg-green-500",
-  REJEITADO: "bg-red-500",
+  RECEBIDO: "bg-amber-400",
+  EM_PICAGEM: "bg-amber-500",
+  BLOQUEADO: "bg-orange-500",
+  EM_VALORIZACAO: "bg-blue-500",
+  DIVERGENCIA: "bg-red-500",
+  VALIDADO: "bg-emerald-500",
 };
 
 const statusLabels: Record<FaturaStatusKey, string> = {
-  PENDENTE: "Pendente",
-  PROCESSANDO: "Processando",
-  EM_REVISAO: "Em Revisão",
-  APROVADO: "Aprovado",
-  REJEITADO: "Rejeitado",
+  RECEBIDO: "Recebido",
+  EM_PICAGEM: "Em Picagem",
+  BLOQUEADO: "Bloqueado",
+  EM_VALORIZACAO: "Em Valorização",
+  DIVERGENCIA: "Divergência",
+  VALIDADO: "Validado",
 };
 
 export default function DashboardPage() {
@@ -290,12 +292,12 @@ export default function DashboardPage() {
             </h2>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">Taxa de Aprovação</span>
+                <span className="text-sm text-slate-500">Taxa de Validação</span>
                 <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
                   <TrendingUp className="h-3.5 w-3.5" />
                   {metrics?.totalFaturas
                     ? Math.round(
-                        ((metrics.faturasByStatus?.APROVADO ?? 0) /
+                        ((metrics.faturasByStatus?.VALIDADO ?? 0) /
                           metrics.totalFaturas) *
                           100
                       )
@@ -304,15 +306,15 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">Em Processamento</span>
+                <span className="text-sm text-slate-500">Em Valorização</span>
                 <span className="text-sm font-semibold text-blue-600">
-                  {metrics?.faturasByStatus?.PROCESSANDO ?? 0}
+                  {metrics?.faturasByStatus?.EM_VALORIZACAO ?? 0}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">Rejeitadas</span>
+                <span className="text-sm text-slate-500">Divergências</span>
                 <span className="text-sm font-semibold text-red-600">
-                  {metrics?.faturasByStatus?.REJEITADO ?? 0}
+                  {metrics?.faturasByStatus?.DIVERGENCIA ?? 0}
                 </span>
               </div>
             </div>

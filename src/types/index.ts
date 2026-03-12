@@ -157,10 +157,11 @@ export interface DashboardMetrics {
 
 // Status color mapping types
 export type FaturaStatusKey =
-  | "PENDENTE"
-  | "PROCESSANDO"
-  | "EM_REVISAO"
-  | "APROVADO"
-  | "REJEITADO";
+  | "RECEBIDO"
+  | "EM_PICAGEM"
+  | "BLOQUEADO"
+  | "EM_VALORIZACAO"
+  | "DIVERGENCIA"
+  | "VALIDADO";
 
 export type TaskStatusKey = "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED";

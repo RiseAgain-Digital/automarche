@@ -7,7 +7,7 @@ import logger from "@/lib/logger";
 
 const updateFaturaSchema = z.object({
   status: z
-    .enum(["PENDENTE", "PROCESSANDO", "EM_REVISAO", "APROVADO", "REJEITADO"])
+    .enum(["RECEBIDO", "EM_PICAGEM", "BLOQUEADO", "EM_VALORIZACAO", "DIVERGENCIA", "VALIDADO"])
     .optional(),
   supplier: z.string().optional(),
   notes: z.string().optional(),

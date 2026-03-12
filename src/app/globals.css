@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f7f7f7;
+  --foreground: #1c2333;
 }
 
 body {
@@ -35,7 +35,7 @@ body {
 
 /* Sidebar scrollbar - dark variant */
 .sidebar-scroll::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #1c2333;
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb {

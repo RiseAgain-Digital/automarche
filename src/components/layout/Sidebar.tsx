@@ -77,17 +77,17 @@ export function Sidebar({ userName = "Usuário", userEmail = "" }: SidebarProps)
   return (
     <aside
       className={`
-        flex flex-col h-screen bg-slate-900 text-white transition-all duration-300 ease-in-out flex-shrink-0
+        flex flex-col h-screen bg-[#1c2333] text-white transition-all duration-300 ease-in-out flex-shrink-0
         ${collapsed ? "w-16" : "w-60"}
       `}
     >
       {/* Logo */}
-      <div className="flex items-center justify-between px-4 py-5 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-5 border-b border-[#2a3347]">
         <Link
           href="/dashboard"
           className={`flex items-center gap-2.5 ${collapsed ? "justify-center w-full" : ""}`}
         >
-          <div className="flex-shrink-0 p-1.5 bg-blue-600 rounded-lg">
+          <div className="flex-shrink-0 p-1.5 bg-[#3b5bdb] rounded-lg">
             <Package2 className="h-5 w-5 text-white" />
           </div>
           {!collapsed && (
@@ -99,7 +99,7 @@ export function Sidebar({ userName = "Usuário", userEmail = "" }: SidebarProps)
         {!collapsed && (
           <button
             onClick={() => setCollapsed(true)}
-            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-[#243044] transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -107,10 +107,10 @@ export function Sidebar({ userName = "Usuário", userEmail = "" }: SidebarProps)
       </div>
 
       {collapsed && (
-        <div className="flex justify-center py-2 border-b border-slate-800">
+        <div className="flex justify-center py-2 border-b border-[#2a3347]">
           <button
             onClick={() => setCollapsed(false)}
-            className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-[#243044] transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -134,8 +134,8 @@ export function Sidebar({ userName = "Usuário", userEmail = "" }: SidebarProps)
                 transition-colors duration-150
                 ${
                   isActive
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    ? "bg-[#243044] text-white"
+                    : "text-slate-400 hover:text-white hover:bg-[#243044]"
                 }
                 ${collapsed ? "justify-center" : ""}
               `}
@@ -148,10 +148,10 @@ export function Sidebar({ userName = "Usuário", userEmail = "" }: SidebarProps)
       </nav>
 
       {/* User section */}
-      <div className="border-t border-slate-800 p-3">
+      <div className="border-t border-[#2a3347] p-3">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="flex-shrink-0 w-8 h-8 bg-[#3b5bdb] rounded-full flex items-center justify-center">
               <span className="text-xs font-semibold text-white">
                 {getInitials(userName)}
               </span>
@@ -166,14 +166,14 @@ export function Sidebar({ userName = "Usuário", userEmail = "" }: SidebarProps)
               onClick={handleSignOut}
               disabled={signingOut}
               title="Sair"
-              className="flex-shrink-0 p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+              className="flex-shrink-0 p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-[#243044] transition-colors disabled:opacity-50"
             >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#3b5bdb] rounded-full flex items-center justify-center">
               <span className="text-xs font-semibold text-white">
                 {getInitials(userName)}
               </span>
@@ -182,7 +182,7 @@ export function Sidebar({ userName = "Usuário", userEmail = "" }: SidebarProps)
               onClick={handleSignOut}
               disabled={signingOut}
               title="Sair"
-              className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-[#243044] transition-colors disabled:opacity-50"
             >
               <LogOut className="h-4 w-4" />
             </button>

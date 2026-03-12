@@ -44,12 +44,12 @@ export async function GET() {
       faturasByStatusRaw,
     ] = await Promise.all([
       prisma.fatura.count(),
-      prisma.fatura.count({ where: { status: "EM_REVISAO" } }),
+      prisma.fatura.count({ where: { status: "EM_VALORIZACAO" } }),
       prisma.fatura.count({
-        where: { status: "APROVADO", updatedAt: { gte: todayStart, lte: todayEnd } },
+        where: { status: "VALIDADO", updatedAt: { gte: todayStart, lte: todayEnd } },
       }),
       prisma.fatura.count({
-        where: { status: "APROVADO", updatedAt: { gte: yesterdayStart, lte: yesterdayEnd } },
+        where: { status: "VALIDADO", updatedAt: { gte: yesterdayStart, lte: yesterdayEnd } },
       }),
       prisma.produto.count({ where: { active: true } }),
       prisma.fatura.count({ where: { createdAt: { gte: thisMonthStart, lte: thisMonthEnd } } }),
@@ -58,7 +58,7 @@ export async function GET() {
     ]);
 
     const faturasByStatus: Record<string, number> = {
-      PENDENTE: 0, PROCESSANDO: 0, EM_REVISAO: 0, APROVADO: 0, REJEITADO: 0,
+      RECEBIDO: 0, EM_PICAGEM: 0, BLOQUEADO: 0, EM_VALORIZACAO: 0, DIVERGENCIA: 0, VALIDADO: 0,
     };
     for (const row of faturasByStatusRaw) {
       faturasByStatus[row.status] = row._count.status;

@@ -76,18 +76,19 @@ model Produto {
 }
 
 enum FaturaStatus {
-  PENDENTE
-  PROCESSANDO
-  EM_REVISAO
-  APROVADO
-  REJEITADO
+  RECEBIDO
+  EM_PICAGEM
+  BLOQUEADO
+  EM_VALORIZACAO
+  DIVERGENCIA
+  VALIDADO
 }
 
 model Fatura {
   id            String        @id @default(cuid())
   number        String        @unique
   supplier      String?
-  status        FaturaStatus  @default(PENDENTE)
+  status        FaturaStatus  @default(RECEBIDO)
   imageUrl      String?
   ocrData       Json?
   totalInvoice  Decimal?      @db.Decimal(10, 2)

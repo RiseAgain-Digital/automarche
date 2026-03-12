@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     // Determine new status
     const hasDiscrepancies = discrepancies.length > 0;
-    const newStatus = hasDiscrepancies ? "EM_REVISAO" : "APROVADO";
+    const newStatus = hasDiscrepancies ? "DIVERGENCIA" : "VALIDADO";
 
     // Update fatura
     await prisma.fatura.update({

@@ -24,19 +24,21 @@ import type { FaturaWithRelations, FaturaStatusKey } from "@/types";
 
 const STATUS_TABS: { key: string; label: string }[] = [
   { key: "ALL", label: "Todas" },
-  { key: "PENDENTE", label: "Pendente" },
-  { key: "PROCESSANDO", label: "Processando" },
-  { key: "EM_REVISAO", label: "Em Revisão" },
-  { key: "APROVADO", label: "Aprovado" },
-  { key: "REJEITADO", label: "Rejeitado" },
+  { key: "RECEBIDO", label: "Recebido" },
+  { key: "EM_PICAGEM", label: "Em Picagem" },
+  { key: "BLOQUEADO", label: "Bloqueado" },
+  { key: "EM_VALORIZACAO", label: "Em Valorização" },
+  { key: "DIVERGENCIA", label: "Divergência" },
+  { key: "VALIDADO", label: "Validado" },
 ];
 
 const statusAccent: Record<FaturaStatusKey, string> = {
-  PENDENTE: "border-l-slate-400",
-  PROCESSANDO: "border-l-blue-500",
-  EM_REVISAO: "border-l-amber-500",
-  APROVADO: "border-l-green-500",
-  REJEITADO: "border-l-red-500",
+  RECEBIDO: "border-l-amber-400",
+  EM_PICAGEM: "border-l-amber-500",
+  BLOQUEADO: "border-l-orange-500",
+  EM_VALORIZACAO: "border-l-blue-500",
+  DIVERGENCIA: "border-l-red-500",
+  VALIDADO: "border-l-emerald-500",
 };
 
 async function fetchFaturas(status?: string): Promise<FaturaWithRelations[]> {
@@ -97,11 +99,11 @@ export default function OperacionalPage() {
   });
 
   const handleApprove = (id: string) => {
-    updateStatusMutation.mutate({ id, status: "APROVADO" });
+    updateStatusMutation.mutate({ id, status: "VALIDADO" });
   };
 
   const handleReject = (id: string) => {
-    updateStatusMutation.mutate({ id, status: "REJEITADO" });
+    updateStatusMutation.mutate({ id, status: "DIVERGENCIA" });
   };
 
   const FaturaCard = ({ fatura }: { fatura: FaturaWithRelations }) => {
@@ -157,7 +159,7 @@ export default function OperacionalPage() {
             <Eye className="h-3.5 w-3.5" />
             Detalhes
           </button>
-          {fatura.status !== "APROVADO" && fatura.status !== "REJEITADO" && (
+          {fatura.status !== "VALIDADO" && fatura.status !== "DIVERGENCIA" && (
             <>
               <button
                 onClick={() => handleApprove(fatura.id)}
@@ -221,7 +223,7 @@ export default function OperacionalPage() {
             >
               <Eye className="h-4 w-4" />
             </button>
-            {fatura.status !== "APROVADO" && fatura.status !== "REJEITADO" && (
+            {fatura.status !== "VALIDADO" && fatura.status !== "DIVERGENCIA" && (
               <>
                 <button
                   onClick={() => handleApprove(fatura.id)}
@@ -373,8 +375,8 @@ export default function OperacionalPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {faturaDetail &&
-                faturaDetail.status !== "APROVADO" &&
-                faturaDetail.status !== "REJEITADO" && (
+                faturaDetail.status !== "VALIDADO" &&
+                faturaDetail.status !== "DIVERGENCIA" && (
                   <>
                     <Button
                       variant="primary"
