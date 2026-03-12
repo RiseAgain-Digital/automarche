@@ -109,7 +109,7 @@ export default function OperacionalPage() {
       : null;
 
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6 max-w-7xl mx-auto">
         <button
           onClick={() => setSelectedId(null)}
           className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-6 transition-colors"
@@ -308,7 +308,7 @@ export default function OperacionalPage() {
 
   // ── Overview ────────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">
           Visão Geral Operacional
@@ -365,7 +365,7 @@ export default function OperacionalPage() {
                         <button
                           key={fatura.id}
                           onClick={() => setSelectedId(fatura.id)}
-                          className="w-full flex items-center justify-between px-5 py-5 hover:bg-slate-50 transition-colors text-left"
+                          className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors text-left"
                         >
                           <div>
                             <p className="text-sm font-semibold text-slate-900">
