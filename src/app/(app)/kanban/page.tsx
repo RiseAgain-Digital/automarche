@@ -165,7 +165,7 @@ function FaturaCard({
     <div
       className={`group relative bg-white rounded-lg border border-slate-200/80 border-l-[3px] ${statusBorder} p-3 ${
         overlay
-          ? "shadow-2xl rotate-[1.5deg] scale-[1.03] cursor-grabbing"
+          ? "shadow-2xl cursor-grabbing"
           : "shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:border-slate-300 cursor-grab active:cursor-grabbing"
       } transition-all duration-150`}
       onClick={!overlay && onOpen ? () => onOpen(fatura.id) : undefined}
