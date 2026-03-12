@@ -6,14 +6,18 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   FileText,
-  Clock,
   AlertTriangle,
   Ban,
   Euro,
   Timer,
   Search,
   Printer,
+  ArrowLeft,
+  Send,
+  CheckCircle2,
+  FileOutput,
 } from "lucide-react";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { DashboardMetrics, FaturaWithRelations, FaturaStatusKey } from "@/types";
 
@@ -25,6 +29,13 @@ const STATUS_RECOMMENDATION: Record<FaturaStatusKey, string> = {
   DIVERGENCIA: "Criar nota de débito",
   VALIDADO: "Nenhuma ação necessária",
 };
+
+async function fetchFaturaDetail(id: string): Promise<FaturaWithRelations> {
+  const res = await fetch(`/api/faturas/${id}`);
+  if (!res.ok) throw new Error("Erro ao buscar fatura");
+  const json = await res.json();
+  return json.data;
+}
 
 async function fetchMetrics(): Promise<DashboardMetrics> {
   const res = await fetch("/api/metrics");
@@ -41,7 +52,32 @@ async function fetchRecentFaturas(): Promise<FaturaWithRelations[]> {
 }
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const { data: detail, isLoading: detailLoading } = useQuery({
+    queryKey: ["fatura", selectedId],
+    queryFn: () => fetchFaturaDetail(selectedId!),
+    enabled: !!selectedId,
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await fetch(`/api/faturas/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Erro");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["faturas"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+      if (selectedId) queryClient.invalidateQueries({ queryKey: ["fatura", selectedId] });
+    },
+  });
 
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["metrics"],
@@ -94,8 +130,98 @@ export default function DashboardPage() {
     },
   ];
 
+  if (selectedId) {
+    const amount = detail?.totalInvoice
+      ? `${parseFloat(String(detail.totalInvoice)).toFixed(0)}€`
+      : null;
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <button
+          onClick={() => setSelectedId(null)}
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-6 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </button>
+        {detailLoading || !detail ? (
+          <div className="space-y-4 animate-pulse">
+            <div className="bg-white rounded-xl p-6 border border-slate-200 h-32" />
+            <div className="bg-white rounded-xl p-6 border border-slate-200 h-48" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-slate-400 mt-0.5" />
+                  <div>
+                    <h1 className="text-xl font-bold text-slate-900">
+                      {detail.supplier ?? "Fornecedor não informado"}
+                    </h1>
+                    <p className="text-sm text-slate-400 mt-0.5">{detail.number}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  {amount && <p className="text-2xl font-bold text-slate-900">{amount}</p>}
+                  <div className="mt-1"><StatusBadge status={detail.status} type="fatura" /></div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-100 flex-wrap">
+                <button className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                  <FileOutput className="h-4 w-4" />Criar nota de débito
+                </button>
+                <button onClick={() => updateStatus.mutate({ id: detail.id, status: "EM_VALORIZACAO" })} className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                  <Send className="h-4 w-4" />Enviar para validação
+                </button>
+                <button onClick={() => updateStatus.mutate({ id: detail.id, status: "VALIDADO" })} className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                  <CheckCircle2 className="h-4 w-4" />Marcar como validado
+                </button>
+                <button onClick={() => updateStatus.mutate({ id: detail.id, status: "VALIDADO" })} className="flex items-center gap-2 px-3 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+                  <Send className="h-4 w-4" />Enviar para contabilidade
+                </button>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200">
+              <div className="px-6 py-4 border-b border-slate-100">
+                <h2 className="text-base font-semibold text-slate-900">Produtos</h2>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    {["Produto", "Referência", "Qtd Picada", "Qtd Fatura", "Preço Unit.", "Estado", "Recomendação"].map((h) => (
+                      <th key={h} className="px-6 py-3 text-left text-xs text-slate-400 font-normal">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {detail.items.length > 0 ? detail.items.map((item) => {
+                    const scan = detail.scanItems.find((s) => s.productCode === item.productCode);
+                    const hasIssue = detail.discrepancies.some((d) => d.productCode === item.productCode);
+                    return (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-3 font-medium text-slate-800">{item.productName ?? "—"}</td>
+                        <td className="px-6 py-3 text-slate-500">{item.productCode ?? "—"}</td>
+                        <td className="px-6 py-3 text-slate-500">{scan ? parseFloat(String(scan.quantity)).toFixed(3) : "—"}</td>
+                        <td className="px-6 py-3 text-slate-500">{parseFloat(String(item.quantity)).toFixed(0)}</td>
+                        <td className="px-6 py-3 text-slate-500">{item.unitPrice ? `${parseFloat(String(item.unitPrice)).toFixed(2)}€` : "—"}</td>
+                        <td className="px-6 py-3"><span className={`text-xs font-medium ${hasIssue ? "text-red-600" : "text-emerald-600"}`}>{hasIssue ? "Divergência" : "Validado"}</span></td>
+                        <td className="px-6 py-3 text-slate-400 text-xs">{hasIssue ? "Criar nota de débito" : STATUS_RECOMMENDATION[detail.status as FaturaStatusKey] ?? "—"}</td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr><td colSpan={7} className="px-6 py-10 text-center text-slate-400 text-sm">Nenhum produto registado</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -183,7 +309,7 @@ export default function DashboardPage() {
                   const recommendation =
                     STATUS_RECOMMENDATION[fatura.status as FaturaStatusKey] ?? "—";
                   return (
-                    <tr key={fatura.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={fatura.id} onClick={() => setSelectedId(fatura.id)} className="hover:bg-slate-50 transition-colors cursor-pointer">
                       <td className="px-6 py-4 font-medium text-slate-900">
                         {fatura.supplier ?? "—"}
                       </td>

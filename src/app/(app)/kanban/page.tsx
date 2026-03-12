@@ -253,7 +253,7 @@ function FaturaDetailPanel({
     : null;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       <button
         onClick={onClose}
         className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-6 transition-colors"
