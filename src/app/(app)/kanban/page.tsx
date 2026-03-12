@@ -11,7 +11,11 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
+  closestCenter,
+  getFirstCollision,
+  UniqueIdentifier,
   useDroppable,
 } from "@dnd-kit/core";
 import {
@@ -682,6 +686,26 @@ function FaturaDetailPanel({
   );
 }
 
+// ─── Collision detection ──────────────────────────────────────────────────────
+// Prefer pointer-within for column droppables so dragging anywhere inside a
+// column (not just the bottom) correctly registers as entering that column.
+function kanbanCollision(args: Parameters<typeof pointerWithin>[0]) {
+  const columnIds = new Set<UniqueIdentifier>(COLUMNS.map((c) => c.key));
+
+  // 1. Check if the pointer is physically inside any column droppable.
+  const pointerCollisions = pointerWithin(args);
+  const overColumn = pointerCollisions.find((c) => columnIds.has(c.id));
+  if (overColumn) return [overColumn];
+
+  // 2. Fallback: rect-intersection to catch edges/fast moves.
+  const rectCollisions = rectIntersection(args);
+  const overColumnRect = rectCollisions.find((c) => columnIds.has(c.id));
+  if (overColumnRect) return [overColumnRect];
+
+  // 3. Fallback: closest center among everything.
+  return closestCenter(args);
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function KanbanPage() {
@@ -899,7 +923,7 @@ export default function KanbanPage() {
         <div className="flex-1 overflow-x-auto">
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={kanbanCollision}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
