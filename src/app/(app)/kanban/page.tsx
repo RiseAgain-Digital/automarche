@@ -188,7 +188,7 @@ function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id: column.key });
 
   return (
-    <div className="flex flex-col w-[220px] flex-shrink-0">
+    <div className="flex flex-col w-[220px] flex-shrink-0 px-4 first:pl-0 last:pr-0">
       {/* Column header */}
       <div className="flex items-center justify-between mb-1 px-1">
         <span
@@ -609,7 +609,7 @@ export default function KanbanPage() {
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
-            <div className="flex gap-4 p-6 min-h-full">
+            <div className="flex p-6 min-h-full divide-x divide-slate-200/60">
               {COLUMNS.map((col) => (
                 <KanbanColumn
                   key={col.key}

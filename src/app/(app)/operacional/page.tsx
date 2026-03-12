@@ -340,7 +340,7 @@ export default function OperacionalPage() {
                 className="bg-white rounded-xl border border-slate-200"
               >
                 {/* Group header */}
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <Icon className="h-4 w-4" />
                     <span>{group.title}</span>
@@ -365,7 +365,7 @@ export default function OperacionalPage() {
                         <button
                           key={fatura.id}
                           onClick={() => setSelectedId(fatura.id)}
-                          className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors text-left"
+                          className="w-full flex items-center justify-between px-5 py-5 hover:bg-slate-50 transition-colors text-left"
                         >
                           <div>
                             <p className="text-sm font-semibold text-slate-900">
